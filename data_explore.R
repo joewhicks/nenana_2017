@@ -4,50 +4,72 @@
 # author: Joe Hicks
 #-------------------------------------------------------------
 
+setwd("/Users/jwhicks/nenana/nenana_2017/")
+
 library(rnoaa)
 library(dplyr)
 library(ggplot2)
 library(data.table)
 library(readr)
 
+# set params
+run_parse=FALSE
+
+# set up api key (from email)
 api_key <- "vTByNQGaRrHhbkZlgDSPSJXOqzNnvtpE"
 
+# import raw GHCND site meta data
 GHCND_raw <- read_lines(file="~/Desktop/ghcnd-stations.txt")
-site_id <- c()
-lng     <- c()
-lat     <- c()
-misc    <- c()
-state   <- c()
-city    <- c()
-misc2   <- c()
-zip     <- c()
 
-for(i in 1:length(GHCND_raw)){
-#for(i in 1:10){
-  site_id[i] = substr(GHCND_sites[i], 1,11)   %>% str_trim()
-  lng[i]     = substr(GHCND_sites[i], 12,20)  %>% str_trim()
-  lat[i]     = substr(GHCND_sites[i], 21,30)  %>% str_trim()
-  misc[i]    = substr(GHCND_sites[i], 31,37)  %>% str_trim()
-  state[i]   = substr(GHCND_sites[i], 38,40)  %>% str_trim()
-  city[i]    = substr(GHCND_sites[i], 41,72)  %>% str_trim()
-  misc2[i]   = substr(GHCND_sites[i], 72,75)  %>% str_trim()
-  zip[i]     = substr(GHCND_sites[i], 76,86)  %>% str_trim()
-  print(paste0(i, "/84086"))
+# initialize variables, names from ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+site_id      <- c()
+lat          <- c()
+lon          <- c()
+elev         <- c()
+state        <- c()
+name         <- c()
+gsn_flag     <- c()
+hcn_crn_flag <- c()
+wmo_id       <- c()
+
+# parse the text file
+if(run_parse==TRUE){
+  for(i in 1:length(GHCND_raw)){
+    #for(i in 1:1000){
+    site_id[i]      = substr(GHCND_raw[i], 1,11)  %>% str_trim()    #ID           1-11   Character
+    lat[i]          = substr(GHCND_raw[i], 13,20) %>% as.numeric()  #LATITUDE     13-20   Real
+    lon[i]          = substr(GHCND_raw[i], 22,30) %>% as.numeric()  #LONGITUDE    22-30   Real
+    elev[i]         = substr(GHCND_raw[i], 32,37) %>% as.numeric()  #ELEVATION    32-37   Real
+    state[i]        = substr(GHCND_raw[i], 39,40) %>% str_trim()    #STATE        39-40   Character
+    name[i]         = substr(GHCND_raw[i], 42,71) %>% str_trim()    #NAME         42-71   Character
+    gsn_flag[i]     = substr(GHCND_raw[i], 73,75) %>% str_trim()    #GSN FLAG     73-75   Character
+    hcn_crn_flag[i] = substr(GHCND_raw[i], 77,79) %>% str_trim()    #HCN/CRN FLAG 77-79   Character
+    wmo_id[i]       = substr(GHCND_raw[i], 81,85) %>% str_trim()    #WMO ID       81-85   Character
+    
+    print(paste0(i, "/84086"))
+  }
 }
 
-GHCND_sites <- data.table(site_id, lng, lat, state, city, zip)
 
+# slam them all into a table and write to csv
+GHCND_sites <- data.table(site_id, lat, lon, elev, state, name, gsn_flag, hcn_crn_flag, wmo_id)
+write.csv(GHCND_sites, file="/Users/jwhicks/nenana/nenana_2017/GHCND_sites.csv", row.names = NULL)
+if(run_parse==FALSE){ GHCND_sites <- read_csv("~/nenana/nenana_2017/GHCND_sites.csv") %>% data.table }
+
+# create Alaska specific sites
 GHCND_sites_AK <- GHCND_sites[state=="AK"]
 
-sites <- GHCND_sites_AK %>% select(site_id) %>% unlist %>% unname
-sites <- paste0("GHCND:", sites)
+#Convert to format consumable by ncdc()
+sites <- GHCND_sites_AK %>% select(site_id) 
+AK_sites <- lapply(sites, function(x) paste0("GHCND:", x) )
+  
 out <- ncdc(
   datasetid='GHCND', 
-#  datatypeid = 'PRCP', 
-  stationid='GHCND:USW00026435', 
-  startdate = "2013-09-03", 
-  enddate = "2013-09-30", 
-  limit=30,
+  stationid=list(AK_sites), 
+  startdate = "2015-01-01", 
+  enddate = "2015-12-31", 
+  #limit=30,
   token = api_key
-  )
-head(out$data)
+)
+#head(out$data)
+
