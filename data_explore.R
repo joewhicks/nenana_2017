@@ -16,7 +16,7 @@ library(readr)
 run_parse=FALSE
 
 # set up api key (from email)
-api_key <- "vTByNQGaRrHhbkZlgDSPSJXOqzNnvtpE"
+noaakey <- "vTByNQGaRrHhbkZlgDSPSJXOqzNnvtpE"
 
 # import raw GHCND site meta data
 GHCND_raw <- read_lines(file="~/Desktop/ghcnd-stations.txt")
@@ -58,18 +58,25 @@ if(run_parse==FALSE){ GHCND_sites <- read_csv("~/nenana/nenana_2017/GHCND_sites.
 
 # create Alaska specific sites
 GHCND_sites_AK <- GHCND_sites[state=="AK"]
+GHCND_sites_ANCH <- GHCND_sites_AK[name %like% "ANCHORAGE"]
 
 #Convert to format consumable by ncdc()
-sites <- GHCND_sites_AK %>% select(site_id) 
-AK_sites <- lapply(sites, function(x) paste0("GHCND:", x) )
+sites <- GHCND_sites_ANCH %>% select(site_id) 
+ANCH_sites <- lapply(sites, function(x) paste0("GHCND:", x) )
   
 out <- ncdc(
   datasetid='GHCND', 
-  stationid=list(AK_sites), 
+  stationid= ANCH_sites$site_id, 
   startdate = "2015-01-01", 
   enddate = "2015-12-31", 
-  #limit=30,
-  token = api_key
+  limit=500,
+  token = noaakey
 )
 #head(out$data)
+
+ncdc_locs(locationcategoryid='CITY', sortfield='name', sortorder='desc', token = noaakey)
+
+
+
+
 
