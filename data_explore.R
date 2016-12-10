@@ -10,6 +10,7 @@ library(rnoaa)
 library(dplyr)
 library(ggplot2)
 library(data.table)
+library(lubridate)
 library(readr)
 
 # set params
@@ -57,25 +58,33 @@ write.csv(GHCND_sites, file="/Users/jwhicks/nenana/nenana_2017/GHCND_sites.csv",
 if(run_parse==FALSE){ GHCND_sites <- read_csv("~/nenana/nenana_2017/GHCND_sites.csv") %>% data.table }
 
 # create Alaska specific sites
-GHCND_sites_AK <- GHCND_sites[state=="AK"]
-GHCND_sites_ANCH <- GHCND_sites_AK[name %like% "ANCHORAGE"]
+GHCND_sites_AK <- GHCND_sites[state=="AK" & name %like% "ANCHORAGE"]
 
 #Convert to format consumable by ncdc()
-sites <- GHCND_sites_ANCH %>% select(site_id) 
-ANCH_sites <- lapply(sites, function(x) paste0("GHCND:", x) )
-  
-out <- ncdc(
+sites <- GHCND_sites_AK %>% select(site_id) 
+AK_sites <- lapply(sites, function(x) paste0("GHCND:", x) )
+
+# Get a list of datasets and data availible 
+AK_site_data <- ncdc(
   datasetid='GHCND', 
-  stationid= ANCH_sites$site_id, 
+  stationid= AK_sites$site_id, 
   startdate = "2015-01-01", 
   enddate = "2015-12-31", 
   limit=500,
   token = noaakey
 )
-#head(out$data)
+AK_site_data$data$date <- AK_site_data$data$date %>% as_date()
 
-ncdc_locs(locationcategoryid='CITY', sortfield='name', sortorder='desc', token = noaakey)
+temps <- AK_site_data$data %>% 
+  data.table %>%
+  filter(datatype == "TMIN" | datatype == "TMAX") %>%
+  select(date, datatype, station, value) 
 
+
+ggplot(temps, aes(date, value, datatype, colour = datatype)) + geom_line()
+
+
+out$data%>% View
 
 
 
