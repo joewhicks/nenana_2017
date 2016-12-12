@@ -114,7 +114,8 @@ temp_2 <- AK_site_data[,grepl("VALUE",names(AK_site_data))]
 AK_data <- cbind(temp_1,temp_2)
 
 AK_data <- data.table(AK_data)
-AK_data <- melt(AK_data, id.vars = c("ID","ELEMENT"))
+AK_data <- melt(AK_data, id.vars = c("ID","YEAR", "MONTH", "ELEMENT"))
 AK_data <- AK_data[value != -9999]
 
-temp <- AK_data[variable == "YEAR" & value == 2015]
+
+
